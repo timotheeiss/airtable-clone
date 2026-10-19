@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <script>try{document.documentElement.classList.add(localStorage.getItem("at-clone-mode")==="before"?"mode-before":"mode-after")}catch(e){document.documentElement.classList.add("mode-after")}</script>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="manage-fields.css" />
 </head>
@@ -39,14 +40,16 @@
       <!-- Top bar -->
       <header class="topbar">
         <div class="topbar-left">
-          <div class="base-icon"><i class="ph-fill ph-film-strip"></i></div>
+          <div class="base-icon"><i class="ph-fill ph-users"></i></div>
           <button class="base-name">
             <span>Customers MASTER</span><i class="ph ph-caret-down"></i>
           </button>
+          <button class="base-status after-only" id="baseStatus" data-tip="Base status"></button>
         </div>
         <div class="topbar-tabs" role="tablist">
-          <a class="top-tab active" role="tab" href="manage-fields.html" aria-current="page">Schema</a>
-          <a class="top-tab" role="tab" href="index.html">Data</a>
+          <a class="top-tab active after-only" role="tab" href="manage-fields.html" aria-current="page">Schema</a>
+          <a class="top-tab after-only" role="tab" href="index.html">Data</a>
+          <a class="top-tab active before-only" role="tab" href="index.html">Data</a>
           <button class="top-tab" role="tab">Automations</button>
           <button class="top-tab" role="tab">Interfaces</button>
           <button class="top-tab" role="tab">Forms</button>
@@ -68,7 +71,7 @@
           <button class="tablebar-btn caret" aria-label="Search all tables"><i class="ph ph-caret-down"></i></button>
           <button class="tablebar-btn"><i class="ph ph-plus"></i><span>Add or import</span></button>
         </div>
-        <button class="tablebar-btn tools mf-tools" id="mfTools"><span>Tools</span><i class="ph ph-caret-down"></i></button>
+        <button class="tablebar-btn tools mf-tools" id="mfTools"><span class="after-only">Tools</span><span class="before-only">Manage fields</span><i class="ph ph-caret-down"></i></button>
       </div>
 
       <!-- Field manager -->
@@ -78,15 +81,23 @@
           <h1 class="fm-title"><b>Customers</b> Fields</h1>
         </div>
 
+        <section class="fm-context after-only" id="fmContext" aria-label="Base context"></section>
+
         <div class="fm-toolbar" id="fmToolbar">
           <div class="fm-tools-default">
             <label class="fm-search"><i class="ph ph-magnifying-glass"></i><input id="fmSearch" placeholder="Find a field" aria-label="Find a field" /></label>
-            <button class="fm-filter" id="permFilter"><span>Permissions: <b>All</b></span><i class="ph ph-caret-down"></i></button>
-            <button class="fm-filter" id="depFilter"><span>Dependencies: <b>All</b></span><i class="ph ph-caret-down"></i></button>
+            <button class="fm-filter before-only" id="permFilter"><span>Permissions: <b>All</b></span><i class="ph ph-caret-down"></i></button>
+            <button class="fm-filter before-only" id="depFilter"><span>Dependencies: <b>All</b></span><i class="ph ph-caret-down"></i></button>
+            <button class="fm-filter after-only" id="kindFilter"><span>Kind: <b>All</b></span><i class="ph ph-caret-down"></i></button>
+            <button class="fm-filter after-only" id="statusFilter"><span>Status: <b>All</b></span><i class="ph ph-caret-down"></i></button>
+            <button class="fm-filter after-only" id="ownerFilter"><span>Owner: <b>All</b></span><i class="ph ph-caret-down"></i></button>
           </div>
           <div class="fm-tools-bulk" id="fmBulk" hidden>
             <span class="fm-bulk-count" id="fmBulkCount"></span>
-            <button class="fm-bulk-btn" id="bulkPerm"><i class="ph ph-lock-simple"></i><span>Edit permissions</span><i class="ph ph-caret-down"></i></button>
+            <button class="fm-bulk-btn before-only" id="bulkPerm"><i class="ph ph-lock-simple"></i><span>Edit permissions</span><i class="ph ph-caret-down"></i></button>
+            <button class="fm-bulk-btn after-only" id="bulkStatus"><i class="ph ph-seal-check"></i><span>Set status</span><i class="ph ph-caret-down"></i></button>
+            <button class="fm-bulk-btn after-only" id="bulkOwner"><i class="ph ph-user-circle"></i><span>Set owner</span><i class="ph ph-caret-down"></i></button>
+            <button class="fm-bulk-btn after-only" id="bulkVerify"><i class="ph ph-check-circle"></i><span>Mark as verified</span></button>
             <button class="fm-bulk-btn danger" id="bulkDelete"><i class="ph ph-trash"></i><span>Delete fields</span></button>
             <button class="fm-bulk-btn" id="bulkClear"><span>Deselect all</span></button>
           </div>
@@ -105,6 +116,7 @@
   <div class="toast" id="toast"></div>
   <div class="tooltip" id="tooltip"></div>
 
+  <script src="schema.js"></script>
   <script src="data.js"></script>
   <script src="manage-fields.js"></script>
 </body>

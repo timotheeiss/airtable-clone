@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <script>try{document.documentElement.classList.add(localStorage.getItem("at-clone-mode")==="before"?"mode-before":"mode-after")}catch(e){document.documentElement.classList.add("mode-after")}</script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -38,13 +39,14 @@
       <!-- Top bar -->
       <header class="topbar">
         <div class="topbar-left">
-          <div class="base-icon"><i class="ph-fill ph-film-strip"></i></div>
+          <div class="base-icon"><i class="ph-fill ph-users"></i></div>
           <button class="base-name" data-menu="base">
             <span>Customers MASTER</span><i class="ph ph-caret-down"></i>
           </button>
+          <button class="base-status after-only" id="baseStatus" data-tip="Base status"></button>
         </div>
         <div class="topbar-tabs" role="tablist">
-          <a class="top-tab" role="tab" href="manage-fields.html">Schema</a>
+          <a class="top-tab after-only" role="tab" href="manage-fields.html">Schema</a>
           <button class="top-tab active" role="tab">Data</button>
           <button class="top-tab" role="tab">Automations</button>
           <button class="top-tab" role="tab">Interfaces</button>
@@ -79,6 +81,7 @@
           </button>
         </div>
         <div class="viewbar-right">
+          <button class="vb-btn after-only" id="btnDerived" data-tip="Show or hide fields computed from other fields (formulas, lookups)"><i class="ph ph-function"></i><span class="lbl">Derived fields</span><span class="mini-toggle"></span></button>
           <button class="vb-btn" data-pop="hide" id="btnHide"><i class="ph ph-eye-slash"></i><span class="lbl">Hide fields</span></button>
           <button class="vb-btn" data-pop="filter" id="btnFilter"><i class="ph ph-funnel-simple"></i><span class="lbl">Filter</span></button>
           <button class="vb-btn" data-pop="group" id="btnGroup"><i class="ph ph-rows"></i><span class="lbl">Group</span></button>
@@ -131,6 +134,7 @@
   <div class="toast" id="toast"></div>
   <div class="tooltip" id="tooltip"></div>
 
+  <script src="schema.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

@@ -19,14 +19,19 @@ window.AT_DATA = (() => {
     { id: "fld5SJ5j67XNp41K3", key: "email", name: "Email", type: "email", icon: "email" },
     { id: "fldJkYiPpUMb38wM4", key: "phone", name: "Phone", type: "phoneNumber", icon: "phone" },
     { id: "fldhnbaHCEXdA2bFg", key: "country", name: "Country", type: "singleSelect", icon: "select", choices: choices.country },
+    { id: "fldK2cQ7mRtY4uZpA", key: "countryCode", name: "Country Code", type: "formula", icon: "formula", kind: "derived", formula: "countryCode" },
     { id: "fldLvbvD6865100Dx", key: "type", name: "Customer Type", type: "singleSelect", icon: "select", choices: choices.type },
     { id: "fldH4g0FB44FvtEfM", key: "plan", name: "Plan", type: "singleSelect", icon: "select", choices: choices.plan },
+    { id: "fldP9oLdx3VbN1qWe", key: "planOld", name: "Plan (old)", type: "singleLineText", icon: "text" },
     { id: "fldsFAmY1pxJfLUtC", key: "status", name: "Customer Status", type: "singleSelect", icon: "select", choices: choices.status },
+    { id: "fldS7nEw2kJh5gTrc", key: "statusNew", name: "Customer Status (new)", type: "singleSelect", icon: "select", choices: choices.status.map((c) => ({ ...c })) },
     {
       id: "fldOfqTmun1gC9JGm", key: "signup", name: "Signup Date", type: "date", icon: "date",
       description: "The date the customer first created their Newgrain account (web or iOS app), in YYYY-MM-DD format. Use it to measure customer tenure, group signups into cohorts, and track acquisition trends over time. Leads use the date they first signed up, even if they haven't finished onboarding.",
     },
+    { id: "fldT3nUr8dYs6aXzb", key: "tenure", name: "Tenure (days)", type: "formula", icon: "formula", kind: "derived", formula: "tenure", numeric: true },
     { id: "fldpPCudBx51Yebai", key: "ltv", name: "Lifetime Value", type: "currency", icon: "currency", symbol: "€", precision: 2, summary: "sum" },
+    { id: "fldA4rRfN5cE8mKqd", key: "arr", name: "ARR (finance)", type: "currency", icon: "currency", symbol: "€", precision: 2 },
     { id: "fldtsi6LsHdHVbABh", key: "channel", name: "Acquisition Channel", type: "singleSelect", icon: "select", choices: choices.channel },
     { id: "fldyRs6gyP3HBjcu3", key: "optin", name: "Marketing Opt-in", type: "checkbox", icon: "checkbox" },
   ];
@@ -93,6 +98,17 @@ window.AT_DATA = (() => {
     return rec;
   });
 
+  // Values for the fields added for the schema prototype.
+  const OLD_PLAN = { Free: "Basic", Pro: "Premium", Studio: "Premium Plus" };
+  records.forEach((rec, i) => {
+    // Legacy plan names were only filled for customers who signed up before the 2024 pricing change.
+    rec.planOld = rec.signup < "2024-01-01" ? OLD_PLAN[rec.plan] : "";
+    // A half-adopted copy of Customer Status that drifts from the original on paused accounts.
+    rec.statusNew = [0, 1, 3].includes(i % 8) ? (rec.status === "Paused" ? "Active" : rec.status) : "";
+    // Annual recurring revenue of active subscriptions, in EUR.
+    rec.arr = rec.status !== "Active" ? 0 : rec.plan === "Pro" ? 96 : rec.plan === "Studio" ? (rec.type === "Business" ? 1200 : 300) : 0;
+  });
+
   // Mock field descriptions (Signup Date keeps its real description from the base).
   const DESCRIPTIONS = {
     fldXbHtoI6otZ9dZz: "Full name of the customer, or the business name for studios, labs and clubs. This is the primary field shown on linked records and in interfaces.",
@@ -109,6 +125,84 @@ window.AT_DATA = (() => {
   };
   fields.forEach((f) => { if (!f.description && DESCRIPTIONS[f.id]) f.description = DESCRIPTIONS[f.id]; });
 
+  // Schema-layer metadata (prototype): status, owner, verification, history, dependencies and Omni drafts.
+  // [by, date] pairs; history is listed newest first and ends with the creation event.
+  const META = {
+    fldXbHtoI6otZ9dZz: { status: "canonical", owner: "sam", created: ["ben", "2021-03-02"], verified: ["sam", "2026-08-12"] },
+    fldQdZcAL83O2vQ0Q: { status: "canonical", owner: "lea", created: ["ben", "2021-03-02"], verified: ["lea", "2025-11-03"] },
+    fld5SJ5j67XNp41K3: { status: "canonical", owner: "sam", created: ["ben", "2021-03-02"], verified: ["sam", "2026-08-12"] },
+    fldJkYiPpUMb38wM4: { status: "canonical", owner: "sam", created: ["ben", "2021-03-02"], verified: ["sam", "2026-08-12"] },
+    fldhnbaHCEXdA2bFg: { status: "canonical", owner: "sam", created: ["ben", "2021-03-02"], verified: ["sam", "2026-06-01"],
+      history: [["raj", "2024-09-18", "options", "Added options “Netherlands” and “Australia”"]] },
+    fldK2cQ7mRtY4uZpA: { created: ["raj", "2025-05-20"], noPurpose: true,
+      history: [["raj", "2025-05-21", "formula", "Formula changed to cover all 10 countries"]],
+      drafts: {
+        status: { value: "canonical", reason: "Computed from Country, 100% filled, used by the ‘Regional digest’ automation." },
+        owner: { value: "raj", reason: "Raj Patel created this field and edited its formula." },
+        purpose: { value: "Two-letter ISO country code derived from Country. Use it for exports and integrations that expect ISO codes; edit Country instead of this field." },
+      },
+      automations: ["Regional digest (weekly)"] },
+    fldLvbvD6865100Dx: { status: "canonical", owner: "sam", created: ["ben", "2021-03-02"], verified: ["sam", "2026-02-10"] },
+    fldH4g0FB44FvtEfM: { status: "canonical", owner: "maria", created: ["ben", "2023-01-09"], verified: ["maria", "2026-09-05"],
+      history: [["maria", "2024-01-15", "options", "Options renamed: Basic → Free, Premium → Pro, Premium Plus → Studio"]] },
+    fldP9oLdx3VbN1qWe: { created: ["ben", "2021-03-02"], updated: ["ben", "2023-01-09"], noPurpose: true,
+      history: [["ben", "2023-01-09", "rename", "Renamed from “Plan” to “Plan (old)”"]],
+      drafts: {
+        status: { value: "deprecated", reason: "Replaced by Plan in Jan 2023. Only filled for customers who signed up before 2024, with no edits since Jan 2023." },
+        purpose: { value: "Legacy plan names from the 2021 pricing (Basic, Premium, Premium Plus). Superseded by Plan — keep for history only and don't use in new reports." },
+      } },
+    fldsFAmY1pxJfLUtC: { status: "canonical", owner: "lea", created: ["ben", "2021-03-02"], verified: ["lea", "2026-09-30"],
+      history: [["lea", "2025-03-04", "options", "Added option “Paused”"]],
+      automations: ["Win-back email when Churned"] },
+    fldS7nEw2kJh5gTrc: { created: ["raj", "2025-03-11"], updated: ["raj", "2025-04-02"], noPurpose: true,
+      history: [["raj", "2025-04-02", "options", "Copied options from Customer Status"]],
+      drafts: {
+        status: { value: "deprecated", reason: "Possible duplicate of Customer Status: same options, only 40% filled, and it disagrees with Customer Status on paused accounts." },
+        purpose: { value: "Abandoned copy of Customer Status started in March 2025. Use Customer Status instead; values here are incomplete and partly out of date." },
+      } },
+    fldOfqTmun1gC9JGm: { status: "canonical", owner: "raj", created: ["ben", "2021-03-02"], verified: ["raj", "2026-07-14"],
+      history: [["raj", "2026-07-14", "description", "Description rewritten"]] },
+    fldT3nUr8dYs6aXzb: { status: "canonical", owner: "raj", created: ["raj", "2025-06-03"], verified: ["raj", "2026-07-14"],
+      purpose: "Days since the customer signed up, computed from Signup Date. Use it for tenure cohorts and retention charts." },
+    fldpPCudBx51Yebai: { status: "canonical", owner: "maria", created: ["ben", "2021-06-14"], verified: ["maria", "2026-09-05"],
+      history: [["maria", "2024-02-01", "config", "Currency changed from USD to EUR"]] },
+    fldA4rRfN5cE8mKqd: { status: "canonical", owner: "maria", created: ["ben", "2022-04-04"], verified: ["maria", "2026-09-12"], updated: ["maria", "2026-09-12"],
+      purpose: "Annual recurring revenue for the account, as reported to the board. Calculated as the monthly subscription value of all active contracts × 12, in EUR. Excludes one-off fees and usage overages. Updated by Finance on the 5th of each month after reconciliation, so figures can lag by up to five weeks. For lifetime revenue, use Lifetime Value instead.",
+      history: [
+        ["maria", "2026-09-12", "description", "Description updated after the Q3 board review"],
+        ["maria", "2024-02-01", "config", "Currency changed from GBP to EUR"],
+        ["ben", "2022-06-20", "rename", "Renamed from “Annual revenue” to “ARR (finance)”"],
+      ],
+      automations: ["Alert Finance when ARR drops", "Monthly ARR digest to #finance"] },
+    fldtsi6LsHdHVbABh: { created: ["raj", "2022-02-08"], updated: ["raj", "2025-08-19"],
+      history: [["raj", "2025-08-19", "options", "Added option “Newsletter”"]],
+      drafts: {
+        status: { value: "canonical", reason: "Fully filled, edited regularly and used by the Growth dashboard." },
+        owner: { value: "raj", reason: "Raj Patel created the field and made all option changes." },
+      } },
+    fldyRs6gyP3HBjcu3: { status: "canonical", owner: "raj", created: ["ben", "2021-09-30"], verified: ["raj", "2025-12-01"] },
+  };
+  const ACTION_LABEL = { created: "Created", rename: "Renamed", options: "Options changed", formula: "Formula edited", config: "Configuration changed", description: "Purpose edited", status: "Status changed", owner: "Owner changed", verified: "Verified" };
+  fields.forEach((f) => {
+    const m = META[f.id] || {};
+    f.kind = f.kind || "data";
+    f.status = m.status || null;
+    f.owner = m.owner || null;
+    if (m.purpose) f.description = m.purpose;
+    if (m.noPurpose) delete f.description;
+    f.created = { by: m.created?.[0] || "ben", at: m.created?.[1] || "2021-03-02" };
+    f.verified = m.verified ? { by: m.verified[0], at: m.verified[1] } : null;
+    f.drafts = m.drafts || {};
+    f.automations = m.automations || [];
+    const hist = (m.history || []).map(([by, at, action, detail]) => ({ by, at, action, detail }));
+    if (f.verified) hist.push({ by: f.verified.by, at: f.verified.at, action: "verified", detail: "Marked as verified" });
+    hist.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+    hist.push({ by: f.created.by, at: f.created.at, action: "created", detail: `Created as ${f.type === "formula" ? "a formula" : "a " + f.type.replace(/([A-Z])/g, " $1").toLowerCase()} field` });
+    f.history = hist;
+    const u = m.updated ? { by: m.updated[0], at: m.updated[1] } : hist[0] ? { by: hist[0].by, at: hist[0].at } : f.created;
+    f.updated = u;
+  });
+
   // Field manager metadata: every field defaults to "Editors and up"; four fields are used by the base's interface.
   const IFACE_DEPS = ["fldXbHtoI6otZ9dZz", "fld5SJ5j67XNp41K3", "fldQdZcAL83O2vQ0Q", "fldJkYiPpUMb38wM4"];
   fields.forEach((f) => {
@@ -118,16 +212,27 @@ window.AT_DATA = (() => {
 
   // Field and record edits are shared between the grid and the field manager for the browser session.
   let saved = null;
-  try { saved = JSON.parse(sessionStorage.getItem("at-clone-state-v2") || "null"); } catch (e) {}
+  try { saved = JSON.parse(sessionStorage.getItem("at-clone-state-v3") || "null"); } catch (e) {}
 
   return {
-    base: { id: "appUThSIYDUYQmhvk", name: "Customers MASTER" },
-    table: { id: "tblP1m5M6B8nkCbay", name: "Customers", recordNoun: "customer" },
+    // Base-level context shown at the top of the Schema tab. Owner, status and purpose are editable;
+    // the rest of the context (tables, canonical and deprecated fields) is derived from field metadata.
+    base: {
+      id: "appUThSIYDUYQmhvk",
+      name: "Customers MASTER",
+      status: "production",
+      owner: "sam",
+      purpose: "System of record for Newgrain's customers: individual film photographers and businesses (labs, studios, retailers, clubs) using the web and iOS app. Sales Ops, Customer Success, Growth and Finance all report from it. Revenue figures are owned by Finance and can lag by up to five weeks, so use ARR (finance) and Lifetime Value for anything about revenue.",
+      updated: { by: "sam", at: "2026-08-12" },
+      ...(saved?.base || {}),
+    },
+    table: { id: "tblP1m5M6B8nkCbay", name: "Customers", recordNoun: "customer", canonicalFor: "Customers", owner: "sam" },
+    actionLabel: ACTION_LABEL,
     view: { id: "viwUCyJEFlT0gIKcC", name: "Grid view" },
     fields: saved?.fields || fields,
     records: saved?.records || records,
     save(state) {
-      try { sessionStorage.setItem("at-clone-state-v2", JSON.stringify(state)); } catch (e) {}
+      try { sessionStorage.setItem("at-clone-state-v3", JSON.stringify(state)); } catch (e) {}
     },
   };
 })();

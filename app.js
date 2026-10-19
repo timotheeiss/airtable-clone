@@ -2,6 +2,7 @@
   "use strict";
 
   const D = window.AT_DATA;
+  const S = window.AT_SCHEMA;
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -11,6 +12,7 @@
     fields: D.fields.map((f) => ({ width: 180, ...f })),
     records: D.records.map((r) => ({ ...r, _comments: [] })),
     hidden: new Set(),
+    showDerived: false, // derived (formula) fields are hidden in the grid unless toggled on
     sorts: [], // {fieldId, dir: 'asc'|'desc'}
     autoSort: true,
     filters: [], // {fieldId, op, value}
@@ -32,7 +34,7 @@
   const primary = () => state.fields[0];
   const fieldById = (id) => state.fields.find((f) => f.id === id);
   const recById = (id) => state.records.find((r) => r.id === id);
-  const visFields = () => state.fields.filter((f, i) => i === 0 || !state.hidden.has(f.id));
+  const visFields = () => state.fields.filter((f, i) => i === 0 || (!state.hidden.has(f.id) && (!S.after || state.showDerived || f.kind !== "derived")));
   const noun = (n) => `${n} ${D.table.recordNoun}${n === 1 ? "" : "s"}`;
 
   // ---------------------------------------------------------------- undo
@@ -53,7 +55,7 @@
   // ---------------------------------------------------------------- formatting
   const fmtCurrency = (n, f) => (n === null || n === undefined || n === "" ? "" : `${f.symbol || "€"}${Number(n).toLocaleString("en-US", { minimumFractionDigits: f.precision ?? 2, maximumFractionDigits: f.precision ?? 2 })}`);
   function display(rec, f) {
-    const v = rec[f.key];
+    const v = S.value(rec, f);
     if (v === null || v === undefined) return "";
     switch (f.type) {
       case "currency": return fmtCurrency(v, f);
@@ -63,19 +65,13 @@
   }
   const choiceColor = (f, name) => (f.choices || []).find((c) => c.name === name)?.color || "grayLight2";
 
-  const ICONS = {
-    text: '<svg class="fi" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5 3.2 13.5h1.6l1.1-2.6h4.2l1.1 2.6h1.6L8 2.5Zm-1.5 7L8 5.8l1.5 3.7h-3Z" fill="currentColor"/></svg>',
-    paragraph: '<i class="ph ph-text-align-left"></i>',
-    email: '<i class="ph ph-envelope-simple"></i>',
-    phone: '<i class="ph ph-phone"></i>',
-    select: '<i class="ph ph-caret-circle-down"></i>',
-    date: '<i class="ph ph-calendar-blank"></i>',
-    currency: '<i class="ph ph-currency-dollar-simple"></i>',
-    checkbox: '<i class="ph ph-check-square"></i>',
-  };
-  const TYPE_LABEL = { singleLineText: "Single line text", multilineText: "Long text", email: "Email", phoneNumber: "Phone number", singleSelect: "Single select", date: "Date", currency: "Currency", checkbox: "Checkbox" };
+  const { ICONS, TYPE_LABEL } = S;
   const fIcon = (f) => ICONS[f.icon] || ICONS.text;
-  const isNumeric = (f) => f.type === "currency";
+  const derivedMsg = (f) => {
+    const src = S.FORMULAS[f.formula]?.from;
+    return `“${f.name}” is computed by a formula${src ? `, so edit ${src} instead` : " and can't be edited"}`;
+  };
+  const isNumeric = (f) => f.type === "currency" || !!f.numeric;
   const sortLabels = (f) => {
     if (isNumeric(f)) return ["1 → 9", "9 → 1"];
     if (f.type === "checkbox") return ["☐ → ☑", "☑ → ☐"];
@@ -95,7 +91,7 @@
   function testCond(rec, c) {
     const f = fieldById(c.fieldId);
     if (!f) return true;
-    const v = rec[f.key];
+    const v = S.value(rec, f);
     const empty = v === null || v === undefined || v === "" || (f.type === "checkbox" && !v);
     if (c.op === "isEmpty") return empty;
     if (c.op === "isNotEmpty") return !empty;
@@ -114,7 +110,7 @@
     return { contains: s.includes(q), notContains: !s.includes(q), is: s === q, isNot: s !== q }[c.op];
   }
   function compare(a, b, f) {
-    let va = a[f.key], vb = b[f.key];
+    let va = S.value(a, f), vb = S.value(b, f);
     const ea = va === null || va === undefined || va === "", eb = vb === null || vb === undefined || vb === "";
     if (ea && eb) return 0;
     if (ea) return 1;
@@ -209,7 +205,7 @@
   let matches = [];
 
   function cellInner(rec, f, cur) {
-    const v = rec[f.key];
+    const v = S.value(rec, f);
     const tall = state.rowHeight !== "short";
     switch (f.type) {
       case "singleSelect":
@@ -228,6 +224,8 @@
   }
   function cellClass(f) {
     let c = "cell";
+    if (S.after && f.kind === "derived") c += " derived-cell";
+    if (S.after && f.status === "deprecated") c += " deprecated-cell";
     if (isNumeric(f)) c += " num";
     if (f.type === "checkbox") c += " center checkbox-cell";
     return c;
@@ -254,10 +252,11 @@
     h += `<div class="row header">`;
     h += `<div class="cell actions"><span class="cbox header-check ${allState}" data-act="checkall" role="checkbox" aria-label="Select all rows"><i class="ph-bold ph-check"></i></span></div>`;
     fs.forEach((f, i) => {
-      const cls = ["cell", i === 0 ? "primary" : "", sortedIds.has(f.id) ? "sorted" : "", filteredIds.has(f.id) ? "filtered" : ""].join(" ");
+      const dep = S.after && f.status === "deprecated";
+      const cls = ["cell", i === 0 ? "primary" : "", sortedIds.has(f.id) ? "sorted" : "", filteredIds.has(f.id) ? "filtered" : "", dep ? "deprecated" : "", S.after && f.kind === "derived" ? "derived" : ""].join(" ");
       h += `<div class="${cls}" data-hf="${f.id}" style="width:${f.width}px" draggable="false">
-        ${fIcon(f)}<span class="hname">${esc(f.name)}</span>
-        ${f.description ? `<i class="ph ph-info hinfo" data-tip="${esc(f.description)}"></i>` : ""}
+        ${dep ? '<i class="ph-fill ph-warning sx-dep-icon"></i>' : fIcon(f)}<span class="hname">${esc(f.name)}</span>
+        ${!S.after && f.description ? `<i class="ph ph-info hinfo" data-tip="${esc(f.description)}"></i>` : ""}
         <i class="ph ph-caret-down hcaret" data-act="fieldmenu"></i>
         <span class="resize-handle" data-act="resize"></span></div>`;
     });
@@ -309,7 +308,9 @@
     renderSummary(fs);
     updateToolbar();
     syncSummaryScroll();
-    D.save({ fields: state.fields, records: state.records });
+    D.save({ fields: state.fields, records: state.records, base: D.base });
+    $("#baseStatus").innerHTML = S.baseStatusHTML(D.base.status);
+    updateDerivedToggle();
   }
 
   // ---------------------------------------------------------------- summary bar
@@ -432,6 +433,7 @@
     select(recId, fieldId);
     const cell = selCellEl();
     if (!cell) return;
+    if (f.kind === "derived") { toast(derivedMsg(f)); return; }
     if (f.type === "checkbox") { toggleCheckbox(rec, f); return; }
     if (f.type === "singleSelect") { openSelectPop(cell, rec, f, (v) => { setValue(rec, f, v); render(); }); return; }
     if (f.type === "date" && initialChar === undefined) { openDatePop(cell, rec, f, (v) => { setValue(rec, f, v); render(); }); return; }
@@ -690,6 +692,11 @@
     const f = base
       ? { ...base, id: "fldNew" + n, key: "k" + n, name: base.name + " copy", choices: base.choices ? base.choices.map((c) => ({ ...c })) : undefined }
       : { id: "fldNew" + n, key: "k" + n, name: "Field " + n, type: "singleLineText", icon: "text", width: 180 };
+    Object.assign(f, {
+      kind: base?.kind || "data", status: null, owner: "me", verified: null, drafts: {}, automations: [], deps: 0, permission: "Editors and up",
+      created: { by: "me", at: S.TODAY }, updated: { by: "me", at: S.TODAY },
+      history: [{ by: "me", at: S.TODAY, action: "created", detail: base ? `Duplicated from “${base.name}”` : "Created as a single line text field" }],
+    });
     state.records.forEach((r) => (r[f.key] = base ? r[base.key] : ""));
     state.fields.splice(at, 0, f);
     pushUndo({ undo: () => state.fields.splice(state.fields.indexOf(f), 1), redo: () => state.fields.splice(at, 0, f) });
@@ -708,13 +715,22 @@
     render();
     toast(`Deleted field “${f.name}”`);
   }
-  function editFieldPop(f, anchor) {
+  // Omni flags near-duplicate fields while a new field is being named.
+  function similarNote(name, f) {
+    const sim = S.similarFields(name, state.fields, f).filter((x) => x.status !== "deprecated");
+    if (!sim.length) return "";
+    const canon = sim[0];
+    return `<div class="sx-similar">${S.aiMark("Omni")}<span><b>Similar field exists:</b> “${esc(canon.name)}”${canon.status === "canonical" ? " is canonical" : ""}${canon.description ? ` — ${esc(S.firstSentence(canon.description))}.` : "."} Consider reusing it instead of adding a duplicate.
+      <button class="link-btn blue" data-use-similar="${canon.id}">Use “${esc(canon.name)}” instead</button></span></div>`;
+  }
+  function editFieldPop(f, anchor, isNew = false) {
     const el = showPop(`
       <div style="width:400px;display:flex;flex-direction:column;gap:12px">
         <input class="f-box" id="efName" value="${esc(f.name)}" style="height:36px" />
+        <div class="ef-similar"></div>
         <div class="f-box select" style="cursor:default">${fIcon(f)}<span style="flex:1;margin-left:8px">${TYPE_LABEL[f.type] || f.type}</span><i class="ph ph-caret-down"></i></div>
         <div style="color:var(--text-subtle);font-size:12px">${typeHelp(f)}</div>
-        <textarea class="f-box" id="efDesc" placeholder="Describe this field (optional)" style="min-height:60px">${esc(f.description || "")}</textarea>
+        <textarea class="f-box" id="efDesc" placeholder="${S.after ? "Purpose: what this field holds and when to use it (optional)" : "Describe this field (optional)"}" style="min-height:60px">${esc(f.description || "")}</textarea>
         <div style="display:flex;justify-content:flex-end;gap:8px">
           <button class="link-btn" data-cancel>Cancel</button>
           <button class="btn-share" style="background:var(--blue)" data-save>Save</button>
@@ -723,7 +739,28 @@
     const nameIn = $("#efName", el);
     nameIn.focus();
     nameIn.select();
-    const save = () => { f.name = nameIn.value.trim() || f.name; f.description = $("#efDesc", el).value.trim() || undefined; closePop(); render(); };
+    const save = () => {
+      const name = nameIn.value.trim() || f.name;
+      const desc = $("#efDesc", el).value.trim() || undefined;
+      if (name !== f.name) { S.log(f, "me", "rename", `Renamed from “${f.name}” to “${name}”`); f.name = name; }
+      if (desc !== f.description) { f.description = desc; S.log(f, "me", "description", desc ? "Purpose edited" : "Purpose cleared"); }
+      closePop();
+      render();
+    };
+    if (isNew && S.after) nameIn.addEventListener("input", () => ($(".ef-similar", el).innerHTML = similarNote(nameIn.value, f)));
+    el.addEventListener("click", (e) => {
+      const use = e.target.closest("[data-use-similar]");
+      if (!use) return;
+      const target = fieldById(use.dataset.useSimilar);
+      closePop();
+      deleteField(f);
+      state.hidden.delete(target.id);
+      if (target.kind === "derived") state.showDerived = true;
+      render();
+      const hc = grid.querySelector(`[data-hf="${target.id}"]`);
+      hc?.scrollIntoView({ inline: "center", block: "nearest" });
+      toast(`Using existing field “${target.name}”`);
+    });
     el.addEventListener("keydown", (e) => { e.stopPropagation(); if (e.key === "Enter" && e.target === nameIn) save(); if (e.key === "Escape") closePop(); });
     $("[data-cancel]", el).onclick = closePop;
     $("[data-save]", el).onclick = save;
@@ -952,7 +989,7 @@
       const f = newField(state.fields.length);
       const hc = grid.querySelector(`[data-hf="${f.id}"]`);
       gridScroll.scrollLeft = gridScroll.scrollWidth;
-      editFieldPop(f, hc);
+      editFieldPop(f, hc, true);
     } else if (act === "addrow") {
       const last = view.flat[view.flat.length - 1];
       addRowAndEdit(last ? state.records.indexOf(last) + 1 : undefined);
@@ -1019,6 +1056,7 @@
     if (mod && e.key.toLowerCase() === "c") { e.preventDefault(); copyText(f.type === "checkbox" ? (rec[f.key] ? "checked" : "") : display(rec, f), "Copied cell"); return; }
     if (mod && e.key.toLowerCase() === "v") {
       e.preventDefault();
+      if (f.kind === "derived") { toast(derivedMsg(f)); return; }
       navigator.clipboard?.readText().then((t) => {
         let v = t.trim();
         if (isNumeric(f)) v = Number(v.replace(/[^0-9.\-]/g, "")) || 0;
@@ -1048,6 +1086,7 @@
       case "Backspace":
       case "Delete":
         e.preventDefault();
+        if (f.kind === "derived") { toast(derivedMsg(f)); break; }
         setValue(rec, f, f.type === "checkbox" ? false : f.type === "currency" || f.type === "date" || f.type === "singleSelect" ? null : "");
         render();
         break;
@@ -1355,7 +1394,8 @@
       const shown = state.fields.slice(1).filter((f) => showHidden || !state.hidden.has(f.id));
       const nHidden = state.fields.slice(1).filter((f) => state.hidden.has(f.id)).length;
       const input = (f) => {
-        const v = rec[f.key];
+        const v = S.value(rec, f);
+        if (f.kind === "derived") return `<div class="f-box f-derived" data-tip="${esc(derivedMsg(f))}">${esc(display(rec, f))}<i class="ph ph-function"></i></div>`;
         switch (f.type) {
           case "multilineText": return `<textarea class="f-box" data-k="${f.id}">${esc(v)}</textarea>`;
           case "email": return `<div class="f-box email-box"><input data-k="${f.id}" value="${esc(v)}" /></div>`;
@@ -1381,7 +1421,7 @@
         <div class="modal-body">
           <div class="modal-main"><div class="modal-inner">
             <div class="primary-field"><div class="f-label">${fIcon(pf)}${esc(pf.name)}</div><input data-k="${pf.id}" value="${esc(rec[pf.key])}" placeholder="Unnamed record" /></div>
-            ${shown.map((f) => `<div class="frow"><div class="f-label">${fIcon(f)}<span>${esc(f.name)}${f.description ? ` <i class="ph ph-info" style="font-size:12px" data-tip="${esc(f.description)}"></i>` : ""}</span></div><div class="f-input">${input(f)}</div></div>`).join("")}
+            ${shown.map((f) => `<div class="frow${S.after && f.status === "deprecated" ? " deprecated" : ""}"><div class="f-label">${S.after && f.status === "deprecated" ? '<i class="ph-fill ph-warning sx-dep-icon"></i>' : fIcon(f)}<span>${esc(f.name)}${f.description ? ` <i class="ph ph-info" style="font-size:12px" data-tip="${esc(f.description)}"></i>` : ""}</span></div><div class="f-input">${input(f)}</div></div>`).join("")}
             ${nHidden ? `<button class="link-btn hidden-fields-note" data-showhidden>${showHidden ? "Hide" : "Show"} ${nHidden} hidden field${nHidden === 1 ? "" : "s"}</button>` : ""}
             <button class="add-field-link" data-addfield><i class="ph ph-plus"></i>Add new field to this table</button>
           </div></div>
@@ -1490,12 +1530,12 @@
       { id: "star", label: "Add to starred", icon: "ph-star", run: () => toast("Added to starred") },
       "-",
       { id: "set", label: "Base settings", icon: "ph-gear-six", run: () => toast("Settings are not available in this clone") },
-      { id: "guide", label: "Base guide", icon: "ph-book-open", run: () => toast("No base guide") },
       "-",
       { id: "del", label: "Delete base", icon: "ph-trash", danger: true, disabled: true },
     ],
     table: [
       { id: "imp", label: "Import data", icon: "ph-upload-simple", run: () => toast("Importing is not available in this clone") },
+      ...(S.after ? [] : [{ id: "mf", label: "Manage fields", icon: "ph-list-checks", run: () => (location.href = "manage-fields.html") }]),
       "-",
       { id: "ren", label: "Rename table", icon: "ph-pencil-simple", run: () => toast("Renaming is not available in this clone") },
       { id: "hide", label: "Hide table", icon: "ph-eye-slash", disabled: true },
@@ -1521,6 +1561,7 @@
     ],
     tools: [
       { id: "ext", label: "Extensions", icon: "ph-puzzle-piece", run: () => toast("Extensions are not available in this clone") },
+      ...(S.after ? [] : [{ id: "mf", label: "Manage fields", icon: "ph-list-checks", run: () => (location.href = "manage-fields.html") }]),
       { id: "rec", label: "Record templates", icon: "ph-file-text", run: () => toast("No record templates") },
       { id: "dd", label: "Date dependencies", icon: "ph-calendar-dots", run: () => toast("Date dependencies are not available in this clone") },
       { id: "ins", label: "Insights", icon: "ph-chart-line-up", run: () => toast("Insights are not available in this clone") },
@@ -1550,7 +1591,83 @@
 
   window.addEventListener("resize", () => { closePop(); syncSummaryScroll(); });
 
+  // ---------------------------------------------------------------- schema layer: derived toggle, base status, field cards
+  const derivedCount = () => state.fields.filter((f) => f.kind === "derived").length;
+  function updateDerivedToggle() {
+    const b = $("#btnDerived");
+    b.classList.toggle("derived-on", state.showDerived);
+    $(".lbl", b).textContent = state.showDerived ? `Derived fields (${derivedCount()})` : `${derivedCount()} derived hidden`;
+  }
+  $("#btnDerived").addEventListener("click", () => {
+    state.showDerived = !state.showDerived;
+    if (state.sel && !visFields().some((f) => f.id === state.sel.fieldId)) state.sel = null;
+    render();
+    toast(state.showDerived ? "Showing derived fields" : "Derived fields hidden");
+  });
+  $("#baseStatus").addEventListener("click", (e) => {
+    const b = e.currentTarget;
+    if (openPop && openPop.anchor === b) return closePop();
+    showMenu(Object.entries(S.BASE_STATUS).map(([k, v]) => ({
+      id: k, label: v.label, hint: D.base.status === k ? "Current" : "",
+      icon: k === "production" ? "ph-broadcast" : k === "draft" ? "ph-pencil-simple-line" : "ph-archive",
+      run: () => { D.base.status = k; render(); toast(`Base marked as ${v.label.toLowerCase()}`); },
+    })), b);
+  });
+
+  // Hovering a column header shows the field's status, owner and purpose.
+  let cardEl = null, cardT = null, cardFor = null;
+  const hideCard = () => { clearTimeout(cardT); cardEl?.remove(); cardEl = null; cardFor = null; };
+  function fieldCardHTML(f) {
+    const dPurpose = S.draftOf(f, "purpose"), dStatus = S.draftOf(f, "status");
+    const purpose = f.description
+      ? `<div class="fc-purpose">${esc(f.description)}</div>`
+      : dPurpose ? `<div class="fc-purpose draft">${S.aiMark()} ${esc(dPurpose.value)}</div>` : `<div class="fc-purpose empty">No purpose documented yet.</div>`;
+    const warn = f.status === "deprecated"
+      ? `<div class="fc-warn"><i class="ph-fill ph-warning"></i><span>Deprecated: kept for history only. Don't use it in new views, automations or reports.</span></div>` : "";
+    const verified = f.verified
+      ? `<span class="${S.isStale(f) ? "sx-verified stale" : ""}">${S.fmtDate(f.verified.at)} · ${esc(S.personName(f.verified.by))}</span>`
+      : '<span class="sx-muted">Never</span>';
+    return `<div class="fc-head">${fIcon(f)}<b>${esc(f.name)}</b>${f.status ? S.statusPill(f.status) : dStatus ? S.statusPill(dStatus.value, { draft: true }) : S.statusPill(null)}</div>
+      ${warn}${purpose}
+      <div class="fc-meta">
+        <span>Owner</span><span>${f.owner ? S.personChip(f.owner, { team: true }) : '<span class="sx-muted">No owner</span>'}</span>
+        <span>Kind</span><span>${f.kind === "derived" ? "Derived · " + esc(TYPE_LABEL[f.type]) : "Data · " + esc(TYPE_LABEL[f.type] || f.type)}</span>
+        <span>Last verified</span><span>${verified}</span>
+        <span>Filled</span><span>${S.fillRate(f, state.records)}% of records</span>
+      </div>
+      <div class="fc-foot"><span class="sx-muted" style="font-size:11px">Updated ${S.relative(f.updated?.at || S.TODAY)}</span><a href="manage-fields.html#${f.id}">Open in Schema →</a></div>`;
+  }
+  grid.addEventListener("mouseover", (e) => {
+    const hc = e.target.closest(".row.header [data-hf]");
+    if (!S.after || !hc || hc.dataset.hf === cardFor) return;
+    if (e.target.closest("[data-act]")) return;
+    hideCard();
+    cardFor = hc.dataset.hf;
+    cardT = setTimeout(() => {
+      if (resizing || dragCol || openPop) return;
+      const f = fieldById(hc.dataset.hf);
+      if (!f) return;
+      cardEl = document.createElement("div");
+      cardEl.className = "field-card";
+      cardEl.innerHTML = fieldCardHTML(f);
+      document.body.appendChild(cardEl);
+      const r = hc.getBoundingClientRect();
+      cardEl.style.left = Math.max(8, Math.min(r.left, innerWidth - cardEl.offsetWidth - 8)) + "px";
+      cardEl.style.top = r.bottom + 4 + "px";
+      cardEl.addEventListener("mouseleave", hideCard);
+    }, 550);
+  });
+  grid.addEventListener("mouseout", (e) => {
+    const hc = e.target.closest(".row.header [data-hf]");
+    if (!hc || hc.contains(e.relatedTarget)) return;
+    if (cardEl && cardEl.contains(e.relatedTarget)) return;
+    hideCard();
+  });
+  document.addEventListener("mousedown", (e) => { if (!cardEl || !cardEl.contains(e.target)) hideCard(); }, true);
+  gridScroll.addEventListener("scroll", hideCard);
+
   // ---------------------------------------------------------------- boot
+  S.mountModeSwitch();
   render();
   if (location.hash && recById(location.hash.slice(1))) openRecord(location.hash.slice(1));
 })();
