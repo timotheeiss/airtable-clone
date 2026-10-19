@@ -1,4 +1,4 @@
-// Snapshot of base appUThSIYDUYQmhvk / table "Customers" / "Grid view", in view order.
+// Snapshot of base appUThSIYDUYQmhvk / table "Accounts" (formerly "Customers") / "Grid view", in view order.
 window.AT_DATA = (() => {
   const choices = {
     country: ["France", "United States", "United Kingdom", "Germany", "Japan", "Canada", "Italy", "Spain", "Netherlands", "Australia"].map((n) => ({ name: n, color: "grayLight2" })),
@@ -212,7 +212,7 @@ window.AT_DATA = (() => {
 
   // Field and record edits are shared between the grid and the field manager for the browser session.
   let saved = null;
-  try { saved = JSON.parse(sessionStorage.getItem("at-clone-state-v3") || "null"); } catch (e) {}
+  try { saved = JSON.parse(sessionStorage.getItem("at-clone-state-v4") || "null"); } catch (e) {}
 
   return {
     // Base-level context shown at the top of the Schema tab. Owner, status and purpose are editable;
@@ -222,17 +222,17 @@ window.AT_DATA = (() => {
       name: "Customers MASTER",
       status: "production",
       owner: "sam",
-      purpose: "System of record for Newgrain's customers: individual film photographers and businesses (labs, studios, retailers, clubs) using the web and iOS app. Sales Ops, Customer Success, Growth and Finance all report from it. Revenue figures are owned by Finance and can lag by up to five weeks, so use ARR (finance) and Lifetime Value for anything about revenue.",
+      purpose: "System of record for all customer accounts, from closed-won to churned. Built in 2022 and used daily by sales ops, onboarding and finance. Sales ops owns account and contact fields, Finance owns revenue fields, which are reconciled on the 5th of each month. Use this base, not the regional sales bases or the 2023 CRM import, for any pipeline or revenue figure. Status fields marked “(new)” are deprecated.",
       updated: { by: "sam", at: "2026-08-12" },
       ...(saved?.base || {}),
     },
-    table: { id: "tblP1m5M6B8nkCbay", name: "Customers", recordNoun: "customer", canonicalFor: "Customers", owner: "sam" },
+    table: { id: "tblP1m5M6B8nkCbay", name: "Accounts", recordNoun: "account", canonicalFor: "Accounts", owner: "sam" },
     actionLabel: ACTION_LABEL,
     view: { id: "viwUCyJEFlT0gIKcC", name: "Grid view" },
     fields: saved?.fields || fields,
     records: saved?.records || records,
     save(state) {
-      try { sessionStorage.setItem("at-clone-state-v3", JSON.stringify(state)); } catch (e) {}
+      try { sessionStorage.setItem("at-clone-state-v4", JSON.stringify(state)); } catch (e) {}
     },
   };
 })();

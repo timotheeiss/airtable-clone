@@ -460,7 +460,7 @@
         </div>
         <div class="ctx-right">
           <div class="ctx-row"><span class="ctx-label">Tables</span><div>
-            <span class="ctx-table"><b>${esc(D.table.name)}</b><span class="sx-canon-table"><i class="ph-fill ph-seal-check"></i>Canonical source for customers</span><span class="sx-muted">${fields.length} fields · ${derived.length} derived · owner ${esc(S.personName(D.table.owner))}</span></span>
+            <span class="ctx-table"><b>${esc(D.table.name)}</b><span class="sx-canon-table"><i class="ph-fill ph-seal-check"></i>Canonical source for ${esc(D.table.canonicalFor.toLowerCase())}</span><span class="sx-muted">${fields.length} fields · ${derived.length} derived · owner ${esc(S.personName(D.table.owner))}</span></span>
           </div></div>
           <div class="ctx-row"><span class="ctx-label">Canonical fields <span class="ctx-n">${canonical.length}</span></span><div class="ctx-chips">
             ${ctxChips(showAll ? canonical : canonical.slice(0, MAX), "canon")}${canonical.length > MAX ? `<button class="ctx-more" data-ctx-more>${showAll ? "Show less" : `+${canonical.length - MAX} more`}</button>` : ""}
