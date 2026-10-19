@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "airtable-clone",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd /private/tmp/claude-501/-Users-timothee-Documents-Projects-airtable-clone/11c9e8cc-471a-4450-92dc-7f561cfb9159/scratchpad/serve && exec python3 -m http.server 5173 --bind 127.0.0.1"],
+      "port": 5173
+    }
+  ]
+}

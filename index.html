@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Customers MASTER: Customers - Airtable</title>
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Left rail -->
+    <nav class="rail">
+      <div class="rail-top">
+        <button class="rail-btn logo" aria-label="Back to home" data-tip="Back to home">
+          <img src="logo.png" width="26" height="26" alt="" style="object-fit:contain" />
+        </button>
+        <button class="rail-btn omni" aria-label="Open Omni" data-tip="Omni">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+            <g fill="currentColor">
+              <circle cx="12" cy="3.5" r="1.4"/><circle cx="18" cy="6" r="1.4"/><circle cx="20.5" cy="12" r="1.4"/><circle cx="18" cy="18" r="1.4"/>
+              <circle cx="12" cy="20.5" r="1.4"/><circle cx="6" cy="18" r="1.4"/><circle cx="3.5" cy="12" r="1.4"/><circle cx="6" cy="6" r="1.4"/>
+            </g>
+          </svg>
+        </button>
+      </div>
+      <div class="rail-bottom">
+        <button class="rail-btn small" aria-label="Help menu" data-tip="Help"><i class="ph ph-question"></i></button>
+        <button class="rail-btn small" aria-label="AI credits" data-tip="AI credits"><i class="ph ph-coins"></i></button>
+        <button class="rail-btn small" aria-label="No unseen notifications" data-tip="Notifications"><i class="ph ph-bell"></i></button>
+        <button class="rail-btn avatar" aria-label="Account" data-tip="Account"><span>T</span></button>
+      </div>
+    </nav>
+
+    <div class="main">
+      <!-- Top bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="base-icon"><i class="ph-fill ph-film-strip"></i></div>
+          <button class="base-name" data-menu="base">
+            <span>Customers MASTER</span><i class="ph ph-caret-down"></i>
+          </button>
+        </div>
+        <div class="topbar-tabs" role="tablist">
+          <a class="top-tab" role="tab" href="manage-fields.html">Schema</a>
+          <button class="top-tab active" role="tab">Data</button>
+          <button class="top-tab" role="tab">Automations</button>
+          <button class="top-tab" role="tab">Interfaces</button>
+          <button class="top-tab" role="tab">Forms</button>
+        </div>
+        <div class="topbar-right">
+          <button class="icon-btn" aria-label="Base history" data-tip="Base history"><i class="ph ph-clock-counter-clockwise"></i></button>
+          <button class="btn-white" data-tip="Launch an interface"><i class="ph ph-presentation"></i><span>Launch</span></button>
+          <button class="btn-white square" aria-label="Copy link" data-tip="Copy base link" id="copyLink"><i class="ph ph-link"></i></button>
+          <button class="btn-share" id="shareBtn">Share</button>
+        </div>
+      </header>
+
+      <!-- Table tabs bar -->
+      <div class="tablebar">
+        <div class="tablebar-left">
+          <button class="table-tab active" data-menu="table">
+            <span>Customers</span><i class="ph ph-caret-down"></i>
+          </button>
+          <button class="tablebar-btn caret" aria-label="Search all tables" data-menu="alltables"><i class="ph ph-caret-down"></i></button>
+          <button class="tablebar-btn" data-menu="addimport"><i class="ph ph-plus"></i><span>Add or import</span></button>
+        </div>
+        <button class="tablebar-btn tools" data-menu="tools"><span>Tools</span><i class="ph ph-caret-down"></i></button>
+      </div>
+
+      <!-- View bar -->
+      <div class="viewbar">
+        <div class="viewbar-left">
+          <button class="vb-icon" id="toggleSidebar" aria-label="Open list of views" data-tip="Open list of views"><i class="ph ph-list"></i></button>
+          <button class="view-name" data-menu="view">
+            <i class="ph-bold ph-table grid-icon"></i><span>Grid view</span><i class="ph ph-caret-down"></i>
+          </button>
+        </div>
+        <div class="viewbar-right">
+          <button class="vb-btn" data-pop="hide" id="btnHide"><i class="ph ph-eye-slash"></i><span class="lbl">Hide fields</span></button>
+          <button class="vb-btn" data-pop="filter" id="btnFilter"><i class="ph ph-funnel-simple"></i><span class="lbl">Filter</span></button>
+          <button class="vb-btn" data-pop="group" id="btnGroup"><i class="ph ph-rows"></i><span class="lbl">Group</span></button>
+          <button class="vb-btn" data-pop="sort" id="btnSort"><i class="ph ph-arrows-down-up"></i><span class="lbl">Sort</span></button>
+          <button class="vb-btn" data-pop="color" id="btnColor"><i class="ph ph-paint-bucket"></i><span class="lbl">Color</span></button>
+          <button class="vb-btn icon-only" data-pop="rowheight" aria-label="Row height" data-tip="Row height"><i class="ph ph-list-dashes"></i></button>
+          <button class="vb-btn" data-pop="share" data-tip="Share view"><i class="ph ph-arrow-square-out"></i><span class="lbl">Share and sync</span></button>
+          <div class="search-wrap" id="searchWrap">
+            <button class="vb-icon" id="searchBtn" aria-label="Search" data-tip="Find in view"><i class="ph ph-magnifying-glass"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <aside class="view-sidebar" id="viewSidebar">
+          <div class="vs-search"><i class="ph ph-magnifying-glass"></i><input placeholder="Find a view" /><button class="vb-icon" aria-label="View list options"><i class="ph ph-gear-six"></i></button></div>
+          <div class="vs-list">
+            <button class="vs-item active"><i class="ph-bold ph-table grid-icon"></i><span>Grid view</span></button>
+          </div>
+          <div class="vs-create">
+            <div class="vs-create-head">Create…</div>
+            <button class="vs-create-item"><i class="ph ph-table" style="color:#166ee1"></i>Grid<i class="ph ph-plus plus"></i></button>
+            <button class="vs-create-item"><i class="ph ph-calendar-blank" style="color:#d54401"></i>Calendar<i class="ph ph-plus plus"></i></button>
+            <button class="vs-create-item"><i class="ph ph-squares-four" style="color:#7c37ef"></i>Gallery<i class="ph ph-plus plus"></i></button>
+            <button class="vs-create-item"><i class="ph ph-kanban" style="color:#048a0e"></i>Kanban<i class="ph ph-plus plus"></i></button>
+            <button class="vs-create-item"><i class="ph ph-chart-bar-horizontal" style="color:#dc043b"></i>Timeline<span class="team">Team</span><i class="ph ph-plus plus"></i></button>
+            <button class="vs-create-item"><i class="ph ph-list-bullets" style="color:#0d7f78"></i>List<i class="ph ph-plus plus"></i></button>
+            <button class="vs-create-item"><i class="ph ph-chart-bar" style="color:#b87503"></i>Gantt<span class="team">Team</span><i class="ph ph-plus plus"></i></button>
+            <div class="vs-sep"></div>
+            <button class="vs-create-item"><i class="ph ph-note-blank" style="color:#dd04a8"></i>Form<i class="ph ph-plus plus"></i></button>
+            <div class="vs-sep"></div>
+            <button class="vs-create-item"><i class="ph ph-folder-simple"></i>Section<span class="team">Team</span><i class="ph ph-plus plus"></i></button>
+          </div>
+        </aside>
+        <div class="grid-wrap" id="gridWrap">
+          <div class="grid-scroll" id="gridScroll">
+            <div class="grid" id="grid"></div>
+          </div>
+          <div class="summary-bar" id="summaryBar"></div>
+          <div class="add-float">
+            <button class="af-plus" id="addRowFloat" aria-label="Add record" data-tip="Add record"><i class="ph ph-plus"></i></button>
+            <button class="af-add" id="addFloatMenu"><i class="ph ph-magic-wand"></i><span>Add...</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="layer"></div>
+  <div class="toast" id="toast"></div>
+  <div class="tooltip" id="tooltip"></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

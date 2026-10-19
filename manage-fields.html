@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Customers MASTER: Customers - Airtable</title>
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="manage-fields.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Left rail -->
+    <nav class="rail">
+      <div class="rail-top">
+        <a class="rail-btn logo" href="index.html" aria-label="Back to home" data-tip="Back to home">
+          <img src="logo.png" width="26" height="26" alt="" style="object-fit:contain" />
+        </a>
+        <button class="rail-btn omni" aria-label="Open Omni" data-tip="Omni">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+            <g fill="currentColor">
+              <circle cx="12" cy="3.5" r="1.4"/><circle cx="18" cy="6" r="1.4"/><circle cx="20.5" cy="12" r="1.4"/><circle cx="18" cy="18" r="1.4"/>
+              <circle cx="12" cy="20.5" r="1.4"/><circle cx="6" cy="18" r="1.4"/><circle cx="3.5" cy="12" r="1.4"/><circle cx="6" cy="6" r="1.4"/>
+            </g>
+          </svg>
+        </button>
+      </div>
+      <div class="rail-bottom">
+        <button class="rail-btn small" aria-label="Help menu" data-tip="Help"><i class="ph ph-question"></i></button>
+        <button class="rail-btn small" aria-label="AI credits" data-tip="AI credits"><i class="ph ph-coins"></i></button>
+        <button class="rail-btn small" aria-label="No unseen notifications" data-tip="Notifications"><i class="ph ph-bell"></i></button>
+        <button class="rail-btn avatar" aria-label="Account" data-tip="Account"><span>T</span></button>
+      </div>
+    </nav>
+
+    <div class="main">
+      <!-- Top bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="base-icon"><i class="ph-fill ph-film-strip"></i></div>
+          <button class="base-name">
+            <span>Customers MASTER</span><i class="ph ph-caret-down"></i>
+          </button>
+        </div>
+        <div class="topbar-tabs" role="tablist">
+          <a class="top-tab active" role="tab" href="manage-fields.html" aria-current="page">Schema</a>
+          <a class="top-tab" role="tab" href="index.html">Data</a>
+          <button class="top-tab" role="tab">Automations</button>
+          <button class="top-tab" role="tab">Interfaces</button>
+          <button class="top-tab" role="tab">Forms</button>
+        </div>
+        <div class="topbar-right">
+          <button class="icon-btn" aria-label="Base history" data-tip="Base history"><i class="ph ph-clock-counter-clockwise"></i></button>
+          <button class="btn-white" data-tip="Launch an interface"><i class="ph ph-presentation"></i><span>Launch</span></button>
+          <button class="btn-white square" aria-label="Copy link" data-tip="Copy base link" id="copyLink"><i class="ph ph-link"></i></button>
+          <button class="btn-share" id="shareBtn">Share</button>
+        </div>
+      </header>
+
+      <!-- Table tabs bar -->
+      <div class="tablebar">
+        <div class="tablebar-left">
+          <a class="table-tab active" href="index.html">
+            <span>Customers</span><i class="ph ph-caret-down"></i>
+          </a>
+          <button class="tablebar-btn caret" aria-label="Search all tables"><i class="ph ph-caret-down"></i></button>
+          <button class="tablebar-btn"><i class="ph ph-plus"></i><span>Add or import</span></button>
+        </div>
+        <button class="tablebar-btn tools mf-tools" id="mfTools"><span>Tools</span><i class="ph ph-caret-down"></i></button>
+      </div>
+
+      <!-- Field manager -->
+      <section class="fm">
+        <div class="fm-head">
+          <a class="fm-back" href="index.html">Back</a>
+          <h1 class="fm-title"><b>Customers</b> Fields</h1>
+        </div>
+
+        <div class="fm-toolbar" id="fmToolbar">
+          <div class="fm-tools-default">
+            <label class="fm-search"><i class="ph ph-magnifying-glass"></i><input id="fmSearch" placeholder="Find a field" aria-label="Find a field" /></label>
+            <button class="fm-filter" id="permFilter"><span>Permissions: <b>All</b></span><i class="ph ph-caret-down"></i></button>
+            <button class="fm-filter" id="depFilter"><span>Dependencies: <b>All</b></span><i class="ph ph-caret-down"></i></button>
+          </div>
+          <div class="fm-tools-bulk" id="fmBulk" hidden>
+            <span class="fm-bulk-count" id="fmBulkCount"></span>
+            <button class="fm-bulk-btn" id="bulkPerm"><i class="ph ph-lock-simple"></i><span>Edit permissions</span><i class="ph ph-caret-down"></i></button>
+            <button class="fm-bulk-btn danger" id="bulkDelete"><i class="ph ph-trash"></i><span>Delete fields</span></button>
+            <button class="fm-bulk-btn" id="bulkClear"><span>Deselect all</span></button>
+          </div>
+          <button class="fm-add" id="fmAdd"><i class="ph ph-plus"></i><span>Add new field</span></button>
+        </div>
+
+        <div class="fm-table-wrap">
+          <div class="fm-table" id="fmTable" role="table" aria-label="Fields"></div>
+        </div>
+      </section>
+      <aside class="fm-panel" id="fmPanel" hidden aria-label="Field dependencies"></aside>
+    </div>
+  </div>
+
+  <div id="layer"></div>
+  <div class="toast" id="toast"></div>
+  <div class="tooltip" id="tooltip"></div>
+
+  <script src="data.js"></script>
+  <script src="manage-fields.js"></script>
+</body>
+</html>
